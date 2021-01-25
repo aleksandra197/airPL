@@ -1,0 +1,167 @@
+---
+title: "Prezentacja pakietu airPL"
+author: "Aleksandra Pacholek, Joanna Podsiadlo"
+date: "01/24/2020"
+output: 
+  ioslides_presentation:
+    incremental: false
+    self-included: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+## O pakiecie
+
+Pakiet airPL pozwala na łatwe pobranie danych dotyczących zanieczyszczenia powietrza w Polsce przy pomocy API dostępnego na stronie Głównego Inspektoraru Ochrony Środowiska, a następnie na ich zwizualizowanie i wyświetlenie prostych statystytk opisowych.
+
+<center>
+![](gios.png){width=250px}
+</center>
+
+## Funkcja StationsInfo()
+
+```{r include=FALSE}
+library(rjson)
+library(jsonlite)
+library(RCurl)
+library(dplyr)
+library(lubridate)
+library(xts)
+```
+
+```{r echo=TRUE}
+StationsInfo <- function(city=NULL, voivodeship=NULL) {
+
+  url = "http://api.gios.gov.pl/pjp-api/rest/station/findAll"
+  encode.url <- URLencode(url)
+  df <- fromJSON(getURL(encode.url))
+  if(!is.null(city)){
+    stopifnot(is.character(city))
+    df<-df[df$city$name == city,]
+  }
+  if(!is.null(voivodeship)){
+    stopifnot(is.character(voivodeship))
+    df<-df[df$city$commune$provinceName == voivodeship,]
+  }
+  View(df)
+}
+```
+
+
+
+## Wynik funkcji
+
+```{r echo=TRUE}
+StationsInfo()
+```
+
+![](stationsinfo.PNG){width=800px}
+
+## Funkcja ParamsInfo()
+
+```{r echo=TRUE}
+ParamsInfo<-function(station.id) {
+
+  stopifnot(is.numeric(station.id))
+  url = "http://api.gios.gov.pl/pjp-api/rest/station/sensors/"
+  encode.url <- URLencode(paste(url,toString(station.id),sep=""))
+  df <- fromJSON(RCurl::getURL(encode.url))
+  df<-df[df$stationId == station.id,]
+  View(df)
+}
+```
+
+
+## Wynik funkcji
+
+```{r echo=TRUE}
+ParamsInfo(station.id=14)
+```
+
+![](paramsinfo.PNG)
+
+## Funkcja GetData()
+```{r echo=TRUE}
+GetData<- function(sensor.id, start.date, end.date){
+
+  url = "http://api.gios.gov.pl/pjp-api/rest/data/getData/"
+  encode.url <- URLencode(paste(url,toString(sensor.id),sep=""))
+  df <- fromJSON(RCurl::getURL(encode.url))
+  df<-df$values %>%
+    filter(date >= as.Date(start.date)& date<= as.Date(end.date))
+  me <- df
+  class(me)<-append(class(me),'airPL')
+  return(me)
+}
+```
+
+## Wynik funkcji
+
+```{r echo=TRUE}
+GetData(sensor.id=92, start.date="2019-01-01", end.date="2021-01-24")
+```
+
+
+
+## Funkcja plot.airPL()
+
+```{r echo=TRUE}
+plot.airPL<-function(df, color=NULL){
+
+  # Converts data frame to time series object and displays plot.
+  #
+  # Args: airlPL object
+  #
+  # Returns:
+  #   Plot.
+  if(is.null(color)){
+    color='green'
+  }
+  df<-na.omit(df)
+  df$date<-as_datetime(df$date)
+  ts <- xts(df$value, order.by=df$date)
+  plot.xts(ts)
+  lines(ts,col=color)
+}
+```
+
+
+## Wynik funkcji
+
+
+```{r echo=TRUE}
+x<-GetData(sensor.id=92, start.date="2019-01-01",
+           end.date="2021-01-24")
+plot.airPL(x)
+```
+
+
+## Funkcja summary.airPL()
+
+```{r echo=TRUE}
+summary.airPL<-function(df){
+
+  # Prints descriptive statistics.
+  #
+  # Args: airPL object
+  #
+  # Returns:
+  #   Printed descriptice statistics.
+
+  cat("Descriptive statistics for air pollution data:\n")
+  cat("-------------------------------------------------\n")
+  summary.default(df$value)
+}
+```
+
+
+
+
+## Wynik funkcji
+
+```{r echo=TRUE}
+summary.airPL(x)
+```
+
+## Dziękujęmy za uwagę
