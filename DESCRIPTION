@@ -1,0 +1,9 @@
+Package: airPL
+Type: Package
+Title: Air Pollution Data for Poland
+Version: 0.1.0
+Author: Aleksandra Pacholek, Joanna Podsiadlo
+Maintainer: The package maintainer <apacholek@student.zarz.agh.edu.pl>
+Description: Allows to download and visualize air pollution data for Poland.
+License: GNU 2
+Encoding: UTF-8
